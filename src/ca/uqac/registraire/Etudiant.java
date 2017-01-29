@@ -1,4 +1,4 @@
-package ca.uqac.resgistraire;
+package ca.uqac.registraire;
 import java.util.*;
 /**
  * Title:        Classes for TP1

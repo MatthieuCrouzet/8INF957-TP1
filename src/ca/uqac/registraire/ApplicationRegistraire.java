@@ -1,4 +1,4 @@
-package ca.uqac.resgistraire;
+package ca.uqac.registraire;
 import java.io.*;
 import ca.uqac.inf853.tp1.*;
 /**

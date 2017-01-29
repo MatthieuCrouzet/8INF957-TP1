@@ -1,4 +1,4 @@
-package ca.uqac.resgistraire;
+package ca.uqac.registraire;
 class Produit {
 	private String cle;
 	private String nom;

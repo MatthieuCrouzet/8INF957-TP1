@@ -1,7 +1,6 @@
 package ca.uqac.inf853.tp1;
 
 import java.io.Serializable;
-import java.util.List;
 
 public class Commande implements Serializable{
 
@@ -15,8 +14,8 @@ public class Commande implements Serializable{
 		m_commande = commande;
 	}
 	
-	public void traiterCommande(){
-		
+	public String getCommandeDescription(){
+		return m_commande;
 	}
 	
 	public String toString(){

@@ -10,15 +10,21 @@ public class ApplicationServeur {
 
 	private int m_port;
 	private ServerSocket m_server_socket;
+	private String m_repertoireSource;
+	private String m_repertoireClasses;
+
 	
 	/**
 	 * prend le numéro de port crée un SocketServer sur le port
+	 * @param repertoireClasses 
+	 * @param repertoireSource 
 	 * @throws IOException 
 	 */
-	public ApplicationServeur(int port) throws IOException{
+	public ApplicationServeur(int port, String repertoireSource, String repertoireClasses) throws IOException{
 		m_port = port;
 		m_server_socket = new ServerSocket(m_port);
-		
+		m_repertoireSource = repertoireSource;
+		m_repertoireClasses = repertoireClasses;
 	}
 	
 	/**
@@ -41,6 +47,7 @@ public class ApplicationServeur {
 			try {
 				Commande commande = (Commande) inToClient.readObject();
 				System.out.println(commande);
+				traiteCommande(commande);
 				/* Envoi du message au client */
 				outToClient.writeObject(commande);
 			} catch (ClassNotFoundException e) {
@@ -55,6 +62,60 @@ public class ApplicationServeur {
 	 * elle appelle la méthode spécialisée
 	 */
 	public void traiteCommande(Commande uneCommande){
+		String[] detailCommande = uneCommande.getCommandeDescription().split("#");
+		switch(detailCommande[0]){
+			case "compilation":
+				traiterCompilation(detailCommande[1]);
+				break;
+			case "chargement":
+				traiterChargement(detailCommande[1]);
+				break;
+			case "creation":
+				try {
+					Class<?> classeDeLobjet = Class.forName(detailCommande[1]);
+					traiterCreation(classeDeLobjet, detailCommande[2]);
+				} catch (ClassNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				break;
+			case "lecture":
+				try {
+					Object pointeurObjet = getClass().getDeclaredField(detailCommande[1]).get(this);
+					traiterLecture(pointeurObjet, detailCommande[2]);
+				} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				break;
+			case "ecriture":
+				try {
+					Object pointeurObjet = getClass().getDeclaredField(detailCommande[1]).get(this);
+					traiterEcriture(pointeurObjet, detailCommande[2], detailCommande[3]);
+				} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				break;
+			case "fonction":
+			
+				try {
+					Object pointeurObjet = getClass().getDeclaredField(detailCommande[1]).get(this);
+					String[] args = detailCommande[3].split(",");		
+					String[] types = new String[args.length];
+					Object[] valeurs = new Object[args.length];
+					for(int index=0; index < args.length; index++){
+						String[] keyValue = args[index].split(":");
+						types[index] = keyValue[0];
+						valeurs[index] = keyValue[1];
+					}
+					traiterAppel(pointeurObjet, detailCommande[2], types, valeurs);
+				} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				break;
+		}
 		
 	}
 	
@@ -126,7 +187,7 @@ public class ApplicationServeur {
 		String repertoireClasses = args[2];
 		String fichSortie = args[3];
 		try {
-			ApplicationServeur appServeur = new ApplicationServeur(port);
+			ApplicationServeur appServeur = new ApplicationServeur(port,repertoireSource, repertoireClasses);
 			appServeur.aVosOrdre();
 		} catch (IOException e) {
 			System.err.println("Server Error: " + e.getMessage());
