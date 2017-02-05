@@ -1,10 +1,23 @@
 package ca.uqac.inf853.tp1;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.lang.reflect.Array;
+import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+
+import javax.tools.*;
+
+import ca.uqac.registraire.Cours;
+import ca.uqac.registraire.Etudiant;
 
 public class ApplicationServeur {
 
@@ -12,7 +25,10 @@ public class ApplicationServeur {
 	private ServerSocket m_server_socket;
 	private String m_repertoireSource;
 	private String m_repertoireClasses;
-
+	private Object m_sendBackMessage;
+	private HashMap<String, Object> m_objectsCreated = new HashMap<>();
+	private URLClassLoader m_classLoader;
+	private ArrayList<Class<?>> m_classesLoaded;
 	
 	/**
 	 * prend le numéro de port crée un SocketServer sur le port
@@ -25,6 +41,7 @@ public class ApplicationServeur {
 		m_server_socket = new ServerSocket(m_port);
 		m_repertoireSource = repertoireSource;
 		m_repertoireClasses = repertoireClasses;
+		m_classLoader = new URLClassLoader(new URL[] { new File(repertoireClasses).toURI().toURL() });
 	}
 	
 	/**
@@ -49,7 +66,8 @@ public class ApplicationServeur {
 				System.out.println(commande);
 				traiteCommande(commande);
 				/* Envoi du message au client */
-				outToClient.writeObject(commande);
+				outToClient.writeObject(m_sendBackMessage);
+				m_sendBackMessage = null;
 			} catch (ClassNotFoundException e) {
 				System.out.println("l'objet envoyé n'est pas de type Commande : " + e.getMessage());
 			}
@@ -124,7 +142,18 @@ public class ApplicationServeur {
 	 * socket
 	 */
 	public void traiterLecture(Object pointeurObjet, String attribut){
-		
+		Object res = null;		
+		Class<?>[] classTypes = null;
+		try {
+			Method method = pointeurObjet.getClass().getMethod("get" + attribut.substring(0, 1).toUpperCase() + attribut.substring(1), classTypes);
+			res = method.invoke(pointeurObjet);
+		} catch (Exception e)  {
+			System.out.println(e.getMessage());
+			m_sendBackMessage = "Error : " + e.getMessage();
+		} 
+		if (res != null){
+			m_sendBackMessage = "Success : " + res.toString();
+		}
 	}
 	
 	/**
@@ -132,7 +161,17 @@ public class ApplicationServeur {
 	 * s'est faite correctement.
 	 */
 	public void traiterEcriture(Object pointeurObjet, String attribut, Object valeur){
-		
+		Object res = null;
+		try {
+			Method method = pointeurObjet.getClass().getMethod("set" + attribut.substring(0, 1).toUpperCase() + attribut.substring(1), valeur.getClass());
+			res = method.invoke(pointeurObjet, valeur);
+		} catch (Exception e)  {
+			System.out.println(e.getMessage());
+			m_sendBackMessage = "Error : " + e.getMessage();
+		} 
+		if (res != null){
+			m_sendBackMessage = "Success : " + res.toString();
+		}
 	}
 	
 	/**
@@ -140,7 +179,17 @@ public class ApplicationServeur {
 	 * s'est faite correctement.
 	 */
 	public void traiterCreation(Class classeDeLobjet, String identificateur){
-		
+		Object res = null;		
+		try {
+			res = classeDeLobjet.newInstance();
+		} catch (Exception e)  {
+			System.out.println(e.getMessage());
+			m_sendBackMessage = "Error : " + e.getMessage();
+		} 
+		if (res != null){
+			m_objectsCreated.put(identificateur, res);
+			m_sendBackMessage = "Success : " + res.toString();
+		}
 	}
 	
 	/**
@@ -148,7 +197,17 @@ public class ApplicationServeur {
 	 * s'est faite correctement.
 	 */
 	public void traiterChargement(String nomQualifie){
-		
+		Class classe = null;
+		try {
+            classe = m_classLoader.loadClass(nomQualifie);
+        } catch (Exception e) {
+        	System.out.println(e.getMessage());
+			m_sendBackMessage = "Error : " + e.getMessage();
+        }
+		if (classe != null){
+            m_classesLoaded.add(classe);
+            m_sendBackMessage = "Success : " + classe;
+		}
 	}
 	
 	/**
@@ -157,7 +216,22 @@ public class ApplicationServeur {
 	 * relatif par rapport au chemin des fichiers sources.
 	 */
 	public void traiterCompilation(String cheminRelatifFichierSource){
-		
+    	String command = "javac " + cheminRelatifFichierSource; 
+    	try {
+			Process process = Runtime.getRuntime().exec(command);
+			m_sendBackMessage = "Success : compilation succeeded";
+			try {
+				process.waitFor();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				m_sendBackMessage = "Error : compilation failed";
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			m_sendBackMessage = "Error : compilation failed";
+		}
 	}
 	
 	/**
@@ -168,7 +242,19 @@ public class ApplicationServeur {
 	 * passé)
 	 */
 	public void traiterAppel(Object pointeurObjet, String nomFonction, String[] types, Object[] valeurs){
-		
+		Class<? extends Object> objectClass = pointeurObjet.getClass();
+		Class<?>[] classTypes = null;
+		Method method = null;
+		Object res = null;
+		try {
+			method = objectClass.getMethod(nomFonction, classTypes);
+			res = method.invoke(pointeurObjet, valeurs);
+		} catch (Exception e){
+			m_sendBackMessage = "Error : " + e.getMessage();
+		}
+		if(res != null){
+			m_sendBackMessage = "Success : " + res.toString();
+		}
 	}
 	
 	/**
