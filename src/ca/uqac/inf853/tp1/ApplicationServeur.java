@@ -99,40 +99,32 @@ public class ApplicationServeur {
 				}
 				break;
 			case "lecture":
-				try {
-					Object pointeurObjet = getClass().getDeclaredField(detailCommande[1]).get(this);
-					traiterLecture(pointeurObjet, detailCommande[2]);
-				} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				Object pointeurObjet = m_objectsCreated.get(detailCommande[1]);
+				traiterLecture(pointeurObjet, detailCommande[2]);
 				break;
 			case "ecriture":
-				try {
-					Object pointeurObjet = getClass().getDeclaredField(detailCommande[1]).get(this);
-					traiterEcriture(pointeurObjet, detailCommande[2], detailCommande[3]);
-				} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				pointeurObjet = m_objectsCreated.get(detailCommande[1]);
+				traiterEcriture(pointeurObjet, detailCommande[2], detailCommande[3]);
 				break;
+				
 			case "fonction":
 			
-				try {
-					Object pointeurObjet = getClass().getDeclaredField(detailCommande[1]).get(this);
-					String[] args = detailCommande[3].split(",");		
-					String[] types = new String[args.length];
-					Object[] valeurs = new Object[args.length];
+				pointeurObjet = m_objectsCreated.get(detailCommande[1]);
+				String[] types = null;
+				Object[] valeurs = null;
+				if(detailCommande.length>4){
+					String[] args = detailCommande[3].split(",");
+					types = new String[args.length];
+					valeurs = new Object[args.length];
 					for(int index=0; index < args.length; index++){
 						String[] keyValue = args[index].split(":");
 						types[index] = keyValue[0];
 						valeurs[index] = keyValue[1];
 					}
-					traiterAppel(pointeurObjet, detailCommande[2], types, valeurs);
-				} catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
 				}
+				
+				traiterAppel(pointeurObjet, detailCommande[2], types, valeurs);
+				
 				break;
 		}
 		
