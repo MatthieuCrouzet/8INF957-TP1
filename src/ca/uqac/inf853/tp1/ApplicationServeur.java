@@ -231,10 +231,22 @@ public class ApplicationServeur {
 	 */
 	public void traiterAppel(Object pointeurObjet, String nomFonction, String[] types, Object[] valeurs){
 		Class<? extends Object> objectClass = pointeurObjet.getClass();
-		Class<?>[] classTypes = null;
+		Class<?>[] classTypes = new Class<?>[types.length];
 		Method method = null;
 		Object res = null;
 		try {
+			for (int i = 0; i < types.length; i++) {
+				for (Class<?> current : m_classesLoaded) {
+					if (current.getName().equals(types[i])) {
+						classTypes[i] = current;
+						break;
+					}
+				}
+				if (classTypes[i] == null) {
+					m_sendBackMessage = "Error : cannot find a type";
+					break;
+				}				
+			}
 			method = objectClass.getMethod(nomFonction, classTypes);
 			res = method.invoke(pointeurObjet, valeurs);
 		} catch (Exception e){
