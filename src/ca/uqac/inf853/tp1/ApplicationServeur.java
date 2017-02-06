@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -43,6 +44,9 @@ public class ApplicationServeur {
 		m_repertoireClasses = repertoireClasses;
 		m_classLoader = new URLClassLoader(new URL[] { new File(repertoireClasses).toURI().toURL() });
 		m_classesLoaded = new ArrayList<Class<?>>();
+		m_classesLoaded.add(Float.TYPE);
+		m_classesLoaded.add(String.class);
+		m_classesLoaded.add(int.class);
 	}
 	
 	/**
@@ -119,7 +123,18 @@ public class ApplicationServeur {
 					for(int index=0; index < args.length; index++){
 						String[] keyValue = args[index].split(":");
 						types[index] = keyValue[0];
-						valeurs[index] = keyValue[1];
+						for (Class<?> current : m_classesLoaded) {
+							if (current.getName().equals(types[index])) {
+									//Si le type demande correspond à une des classes du registraire on recupere une instance 
+									if(keyValue[1].contains("ID")){
+										valeurs[index] = m_objectsCreated.get(keyValue[1].substring(keyValue[1].indexOf("(")+1, keyValue[1].indexOf(")")));
+									}
+									//Sinon, on cree l'objet en le parsant selon le type demande
+									else{
+										valeurs[index] = parse(current, keyValue[1]);
+									}
+							}
+						}
 					}
 				}
 				
@@ -130,6 +145,17 @@ public class ApplicationServeur {
 		
 	}
 	
+	private Object parse(Class<?> current, String value) {
+		if(current == Float.TYPE){
+				return Float.parseFloat(value);
+		}
+		else if(current == int.class){
+			return Integer.parseInt(value);
+		}
+			
+		return value;
+	}
+
 	/**
 	 * traiterLecture : traite la lecture d'un attribut. Renvoie le résultat par le
 	 * socket
@@ -250,7 +276,6 @@ public class ApplicationServeur {
 		Method method = null;
 		Object res = null;
 		try {
-			
 			method = objectClass.getMethod(nomFonction, classTypes);
 			res = method.invoke(pointeurObjet, valeurs);
 		} catch (Exception e){
