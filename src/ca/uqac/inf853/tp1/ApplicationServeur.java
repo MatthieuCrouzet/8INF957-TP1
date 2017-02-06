@@ -112,7 +112,7 @@ public class ApplicationServeur {
 				pointeurObjet = m_objectsCreated.get(detailCommande[1]);
 				String[] types = null;
 				Object[] valeurs = null;
-				if(detailCommande.length>4){
+				if(detailCommande.length>3){
 					String[] args = detailCommande[3].split(",");
 					types = new String[args.length];
 					valeurs = new Object[args.length];
@@ -231,10 +231,9 @@ public class ApplicationServeur {
 	 */
 	public void traiterAppel(Object pointeurObjet, String nomFonction, String[] types, Object[] valeurs){
 		Class<? extends Object> objectClass = pointeurObjet.getClass();
-		Class<?>[] classTypes = new Class<?>[types.length];
-		Method method = null;
-		Object res = null;
-		try {
+		Class<?>[] classTypes = null;
+		if (types != null){
+			classTypes = new Class<?>[types.length];
 			for (int i = 0; i < types.length; i++) {
 				for (Class<?> current : m_classesLoaded) {
 					if (current.getName().equals(types[i])) {
@@ -247,6 +246,11 @@ public class ApplicationServeur {
 					break;
 				}				
 			}
+		}
+		Method method = null;
+		Object res = null;
+		try {
+			
 			method = objectClass.getMethod(nomFonction, classTypes);
 			res = method.invoke(pointeurObjet, valeurs);
 		} catch (Exception e){
