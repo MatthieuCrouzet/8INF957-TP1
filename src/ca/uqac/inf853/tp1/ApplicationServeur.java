@@ -42,6 +42,7 @@ public class ApplicationServeur {
 		m_repertoireSource = repertoireSource;
 		m_repertoireClasses = repertoireClasses;
 		m_classLoader = new URLClassLoader(new URL[] { new File(repertoireClasses).toURI().toURL() });
+		m_classesLoaded = new ArrayList<Class<?>>();
 	}
 	
 	/**
@@ -216,21 +217,15 @@ public class ApplicationServeur {
 	 * relatif par rapport au chemin des fichiers sources.
 	 */
 	public void traiterCompilation(String cheminRelatifFichierSource){
-    	String command = "javac " + cheminRelatifFichierSource; 
+		String[] sources = cheminRelatifFichierSource.split(",");    	
     	try {
-			Process process = Runtime.getRuntime().exec(command);
-			m_sendBackMessage = "Success : compilation succeeded";
-			try {
+    		for(int i = 0; i < sources.length; i++){
+	    		String command = "javac " + sources[i]; 
+				Process process = Runtime.getRuntime().exec(command);
 				process.waitFor();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				m_sendBackMessage = "Error : compilation failed";
 			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			m_sendBackMessage = "Error : compilation failed";
+		} catch (Exception e) {
+			m_sendBackMessage = "Error : " + e.getMessage();
 		}
 	}
 	
