@@ -212,7 +212,8 @@ public class ApplicationServeur {
 		String[] sources = cheminRelatifFichierSource.split(",");    	
     	try {
     		for(int i = 0; i < sources.length; i++){
-	    		String command = "javac " + sources[i]; 
+	    		String command = "javac " + m_repertoireSource + sources[i].substring(5); 
+	    		//System.out.println(command);
 				Process process = Runtime.getRuntime().exec(command);
 				process.waitFor();
 			}
