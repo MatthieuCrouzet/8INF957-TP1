@@ -4,22 +4,20 @@ import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 
-import javax.tools.*;
-
-import ca.uqac.registraire.Cours;
-import ca.uqac.registraire.Etudiant;
-
+/**
+ * 
+ * @author Baptiste Buron, Matthieu Crouzet
+ * ApplicationServeur initialise une connexion reçoit les objets de type Commande envoyé par le client
+ * execute les commandes et renvoie les résultats au programme client
+ */
 public class ApplicationServeur {
 
 	private int m_port;
@@ -33,8 +31,8 @@ public class ApplicationServeur {
 	
 	/**
 	 * prend le numéro de port crée un SocketServer sur le port
-	 * @param repertoireClasses 
-	 * @param repertoireSource 
+	 * @param repertoireClasses : le chemin du repertoire contenant les classes à compiler
+	 * @param repertoireSource : le chemin du repertoire contenant les fichiers sources pour les charger
 	 * @throws IOException 
 	 */
 	public ApplicationServeur(int port, String repertoireSource, String repertoireClasses) throws IOException{
@@ -42,7 +40,7 @@ public class ApplicationServeur {
 		m_server_socket = new ServerSocket(m_port);
 		m_repertoireSource = repertoireSource;
 		m_repertoireClasses = repertoireClasses;
-		m_classLoader = new URLClassLoader(new URL[] { new File(repertoireClasses).toURI().toURL() });
+		m_classLoader = new URLClassLoader(new URL[] { new File(m_repertoireClasses).toURI().toURL() });
 		m_classesLoaded = new ArrayList<Class<?>>();
 		m_classesLoaded.add(Float.TYPE);
 		m_classesLoaded.add(String.class);
@@ -83,17 +81,23 @@ public class ApplicationServeur {
 	/**
 	 * prend uneCommande dument formatée et la traite. Dépendant du type de commande,
 	 * elle appelle la méthode spécialisée
+	 * @param uneCommande : la commande à traiter
 	 */
 	public void traiteCommande(Commande uneCommande){
 		String[] detailCommande = uneCommande.getCommandeDescription().split("#");
 		switch(detailCommande[0]){
+		// On gère six cas de commande à exécuter : compilation / chargement / creation / lecture / ecriture / fonction
 			case "compilation":
+				//on lance la méthode traiterCompilation()
 				traiterCompilation(detailCommande[1]);
 				break;
 			case "chargement":
+				//on lance la méthode traiterChargement()
 				traiterChargement(detailCommande[1]);
 				break;
 			case "creation":
+				//on lance la méthode traiterCréation()
+				
 				try {
 					Class<?> classeDeLobjet = Class.forName(detailCommande[1]);
 					traiterCreation(classeDeLobjet, detailCommande[2]);
@@ -103,15 +107,20 @@ public class ApplicationServeur {
 				}
 				break;
 			case "lecture":
+				// On lance la méthode traiterLecture()
+				
 				Object pointeurObjet = m_objectsCreated.get(detailCommande[1]);
 				traiterLecture(pointeurObjet, detailCommande[2]);
 				break;
 			case "ecriture":
+				//On lance la méthode traiterEcriture()
+				
 				pointeurObjet = m_objectsCreated.get(detailCommande[1]);
 				traiterEcriture(pointeurObjet, detailCommande[2], detailCommande[3]);
 				break;
 				
 			case "fonction":
+				//On lance la méthode traiteAppel()
 			
 				pointeurObjet = m_objectsCreated.get(detailCommande[1]);
 				String[] types = null;
@@ -145,6 +154,12 @@ public class ApplicationServeur {
 		
 	}
 	
+	/**
+	 * methode privée pour convertir une chaine de caractère selon type primitif voulue
+	 * @param current : classe pouvant représenter un type primitif
+	 * @param value : chaine de caractère à convertir
+	 * @return la valeur convertie
+	 */
 	private Object parse(Class<?> current, String value) {
 		if(current == Float.TYPE){
 				return Float.parseFloat(value);
@@ -159,6 +174,8 @@ public class ApplicationServeur {
 	/**
 	 * traiterLecture : traite la lecture d'un attribut. Renvoie le résultat par le
 	 * socket
+	 * @param pointeurObjet : l'objet sur lequel on lit l'attribut
+	 * @param attribut : l'attribut à lire
 	 */
 	public void traiterLecture(Object pointeurObjet, String attribut){
 		Object res = null;		
@@ -178,6 +195,9 @@ public class ApplicationServeur {
 	/**
 	 * traiterEcriture : traite l'écriture d'un attribut. Confirme au client que l'écriture
 	 * s'est faite correctement.
+	 * @param pointeurObjet : l'objet sur lequel on redéfinit un attribut
+	 * @param attribut : l'attribut qui doit etre modifie
+	 * @param valeur : l'objet qui va modifier l'attribut
 	 */
 	public void traiterEcriture(Object pointeurObjet, String attribut, Object valeur){
 		Object res = null;
@@ -196,6 +216,8 @@ public class ApplicationServeur {
 	/**
 	 * traiterCreation : traite la création d'un objet. Confirme au client que la création
 	 * s'est faite correctement.
+	 * @param classeDeLobjet : la classe dont on souhaite créer une instance
+	 * @param identificateur : l'indentifiant le l'instance nouvellement créée
 	 */
 	public void traiterCreation(Class classeDeLobjet, String identificateur){
 		Object res = null;		
@@ -214,6 +236,7 @@ public class ApplicationServeur {
 	/**
 	 * traiterChargement : traite le chargement d'une classe. Confirmes au client que la création
 	 * s'est faite correctement.
+	 * @param nomQualifie : le nom de la classe à charger
 	 */
 	public void traiterChargement(String nomQualifie){
 		Class classe = null;
@@ -233,13 +256,14 @@ public class ApplicationServeur {
 	 * traiterCompilation : traite la compilation d'un fichier source java. Confirme au client
 	 * que la compilation s'est faite correctement. Le fichier source est donné par son chemin
 	 * relatif par rapport au chemin des fichiers sources.
+	 * @param cheminRelatifFichierSource : le nom des fichiers à compiler
 	 */
 	public void traiterCompilation(String cheminRelatifFichierSource){
 		String[] sources = cheminRelatifFichierSource.split(",");    	
     	try {
     		for(int i = 0; i < sources.length; i++){
+    			//On éxécute la commande de compilation autant de fois qu'il y a de fichier à compiler
 	    		String command = "javac " + m_repertoireSource + sources[i].substring(5); 
-	    		//System.out.println(command);
 				Process process = Runtime.getRuntime().exec(command);
 				process.waitFor();
 			}
@@ -254,6 +278,10 @@ public class ApplicationServeur {
 	 * type des arguments, et un tableau d'arguments pour la fonction. Le résultat de la
 	 * fonction est renvoyé par le serveur au client (ou le message que tout s'est bien
 	 * passé)
+	 * @param pointeurObjet : L'instance sur lequel on execute la fonction
+	 * @param nomFonction : le nom de la fonction à exécuter
+	 * @param types: les types des paramètres mis dans la fonction appelée
+	 * @param valeurs : les paramètres mis dans la fonction appelée
 	 */
 	public void traiterAppel(Object pointeurObjet, String nomFonction, String[] types, Object[] valeurs){
 		Class<? extends Object> objectClass = pointeurObjet.getClass();
@@ -287,10 +315,10 @@ public class ApplicationServeur {
 	}
 	
 	/**
-	 * programme principale. Prend 4 arguments: 1) numéro de port, 2) répertoire source,
+	 * programme principal. Prend 4 arguments: 1) numéro de port, 2) répertoire source,
 	 * 3) répertoire classes et 4) nom du fichier de traces (sortie)
-	 * Cette méthode doit créer une instance de la classe ApplicationServeur, l'initialiser
-	 * puis appeler aVosOrdres sur cet objet
+	 * Cette méthode crée une instance de la classe ApplicationServeur, l'initialise
+	 * puis appele aVosOrdres() sur cet objet
 	 */
 	public static void main(String[] args) {
 		if (args.length != 4){
